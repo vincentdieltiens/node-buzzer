@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "noImplicitAny": false,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "target": "es5",
+        "sourceMap": true,
+        "typeRoots": [
+            "./node_modules/@types"
+        ],
+        "outDir": "build"
+    },
+    "compileOnSave": true,
+    "exclude": [
+        "node_modules",
+        "/node_modules",
+        "/node_modules*"
+    ]
+}

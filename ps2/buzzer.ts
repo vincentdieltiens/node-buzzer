@@ -1,4 +1,3 @@
-/// <reference path="../node_modules/@types/node/index.d.ts" />
 /// <reference path="./typings/node-hid.d.ts" />
 
 'use strict';

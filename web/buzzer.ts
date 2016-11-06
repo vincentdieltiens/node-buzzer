@@ -1,6 +1,3 @@
-/// <reference path="../node_modules/@types/node/index.d.ts" />
-/// <reference path="../node_modules/@types/ip/index.d.ts" />
-/// <reference path="../node_modules/@types/express/index.d.ts" />
 /// <reference path="./typings/nodejs-websocket.d.ts" />
 
 'use strict';

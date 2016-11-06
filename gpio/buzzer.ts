@@ -1,4 +1,3 @@
-/// <reference path="./typings/rpio.d.ts" />
 
 import * as rpio from 'rpio';
 import { Buzzer } from '../buzzer';

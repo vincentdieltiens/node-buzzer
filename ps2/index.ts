@@ -1,0 +1,1 @@
+export { Ps2Buzzer } from './buzzer'

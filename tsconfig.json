@@ -9,6 +9,7 @@
         "typeRoots": [
             "./node_modules/@types"
         ],
+        "moduleResolution": "node",
         "outDir": "build"
     },
     "compileOnSave": true,

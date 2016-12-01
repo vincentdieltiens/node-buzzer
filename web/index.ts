@@ -1,0 +1,1 @@
+export { WebBuzzer } from './buzzer'

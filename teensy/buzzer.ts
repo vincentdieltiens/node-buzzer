@@ -1,52 +1,5 @@
-'use strict';
-
-import * as HID from 'node-hid';
 import { Buzzer } from '../buzzer';
-
-var signals = [
-	// controller 1
-	[0, 0, 1, 0, 240],
-	[0, 0, 16, 0, 240],
-	[0, 0, 8, 0, 240],
-	[0, 0, 4, 0, 240],
-	[0, 0, 2, 0, 240],
-	// controller 2
-	[0, 0, 32, 0, 240],
-	[0, 0, 0, 2, 240],
-	[0, 0, 0, 1, 240],
-	[0, 0, 128, 0, 240],
-	[0, 0, 64, 0, 240],
-	// controller 3
-	[0, 0, 0, 4, 240],
-	[0, 0, 0, 64, 240],
-	[0, 0, 0, 32, 240],
-	[0, 0, 0, 16, 240],
-	[0, 0, 0, 8, 240],
-	// controller 4
-	[0, 0, 0, 128, 240],
-	[0, 0, 0, 0, 248],
-	[0, 0, 0, 0, 244],
-	[0, 0, 0, 0, 242],
-	[0, 0, 0, 0, 241]
-]
-
-function signalsEqual(a, b) {
-	for(var i=0; i < 5; i++) {
-		if (a[i] != b[i]) {
-			return false;
-		}
-	}
-	return true;
-}
-
-function searchSignalIndex(signal): number {
-	for (var i=0; i < signals.length; i++) {
-		if (signalsEqual(signal, signals[i])) {
-			return i;
-		}
-	}
-	return -1;
-}
+import * as HID from 'node-hid';
 
 function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIndex:number) {
 	if (!handlers) {
@@ -58,33 +11,39 @@ function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIn
 	}
 }
 
-export class Ps2Buzzer implements Buzzer {
+export class TeensyBuzzer implements Buzzer {
 	device: HID.HID;
-	lights: Array<any>;
-	handlers: Array<Array<Function>>;
 	eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-	constructor(device) {
-		this.device = device
+	handlers: Array<Array<Function>>;
+	buzzersCount: number;
+	constructor() {
+		var devices = HID.devices()
+		var deviceInfo = devices.find( function(d) {
+			return d.vendorId===0x16C0 
+					&& d.productId===0x0486 
+					&& d.usagePage===0xFFAB 
+					&& d.usage===0x200;
+		});
+		
+		if (!deviceInfo) {
+			try {
+				this.device = new HID.HID(5824, 1158);
+			} catch(e) {
+				throw new Error("No buzzer found");
+			}
+		} else {
+			this.device = new HID.HID(deviceInfo.path);
+		}
 
-
+		this.buzzersCount = 2;
 		this.eventListeners = { 'ready': [], 'leave': [] };
-		this.lights = [0x0, 0x0, 0x0, 0x0]
 
 		this.handlers = [];
 		this.device.on("data", (signal) => {
-			var signalIndex = searchSignalIndex(signal);
-			if (signalIndex >= 0) {
-				var controllerIndex = Math.floor(signalIndex / 5);
-				var buttonIndex = signalIndex % 5;
-
-				var key = 'c'+controllerIndex+'b'+buttonIndex;
-				callHandlers(this.handlers[key], controllerIndex, buttonIndex);
-
-				key = 'c'+controllerIndex;
-				callHandlers(this.handlers[key], controllerIndex, buttonIndex);
-
-				callHandlers(this.handlers['all'], controllerIndex, buttonIndex);
-			}
+			console.log('data !');
+			var controllerIndex = signal[0];
+			callHandlers(this.handlers['c'+controllerIndex], controllerIndex, 0);
+			callHandlers(this.handlers['all'], controllerIndex, 0);
 		});
 
 		this.device.on("error", () => {
@@ -107,7 +66,10 @@ export class Ps2Buzzer implements Buzzer {
 	}
 
 	leave() {
-		this.light([0, 1, 2, 3], 0x00);
+		for(var i=0; i < this.buzzersCount; i++) {
+			this.light(i, 0x00);
+		}
+		
 		this.device.close();
 	}
 
@@ -115,22 +77,25 @@ export class Ps2Buzzer implements Buzzer {
 		if (value != 0x00 && value != 0xFF) {
 			throw new Error("light should have a value of 0x0 or 0xFF")
 		}
-		var message = [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0];
 
+		var indexes = [];
 		if (typeof(controllerIndexes) == 'number') {
-			this.lights[controllerIndexes] = value;
+			indexes = [controllerIndexes];
 		} else {
-			for(var ctrl in controllerIndexes) {
-				this.lights[controllerIndexes[ctrl]] = value;
+			indexes = controllerIndexes
+		}
+		
+		for(var i=0; i < indexes.length; i++) {
+			var message = [];
+			for(var j=0; j <= 64; j++) {
+				message[j] = 0x00;
 			}
-		}
+			message[0] = 1;
+			message[1] = indexes[i];
+			message[2] = value ? 1 : 0;
 
-		for (var i in this.lights) {
-			var j = parseInt(i, 10)+2;
-			message[j] = this.lights[i];
+			this.device.write(message);
 		}
-
-		this.device.write(message);
 	}
 
 	lightOn(controllerIndexes) {
@@ -141,7 +106,7 @@ export class Ps2Buzzer implements Buzzer {
 		this.light(controllerIndexes, 0x0);
 	}
 
-	blink(controllerIndexes, times = 5, duration = 150) {
+	blink(controllerIndexes, times, duration) {
 		var on = true
 		var count = 0;
 		var interval = setInterval(function() {
@@ -161,7 +126,7 @@ export class Ps2Buzzer implements Buzzer {
 		}, duration);
 	}
 
-	onPress(callback: Function, controllerIndex: number = undefined, buttonIndex: number = undefined): Function {
+	onPress(callback: Function, controllerIndex: number, buttonIndex: number): Function {
 		var key = 'all';
 		if (controllerIndex != undefined || buttonIndex != undefined) {
 			key = '';
@@ -186,6 +151,8 @@ export class Ps2Buzzer implements Buzzer {
 	}
 
 	controllersCount():number {
-		return 4;
+		return this.buzzersCount;
 	}
+
+
 }

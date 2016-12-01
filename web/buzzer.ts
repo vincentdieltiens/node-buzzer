@@ -1,4 +1,3 @@
-/// <reference path="./typings/nodejs-websocket.d.ts" />
 
 'use strict';
 

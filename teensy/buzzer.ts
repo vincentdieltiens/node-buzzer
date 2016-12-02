@@ -1,4 +1,5 @@
 import { Buzzer } from '../buzzer';
+import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
 import * as HID from 'node-hid';
 
 function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIndex:number) {
@@ -29,7 +30,7 @@ export class TeensyBuzzer implements Buzzer {
 			try {
 				this.device = new HID.HID(5824, 1158);
 			} catch(e) {
-				throw new Error("No buzzer found");
+				throw new BuzzerNotFoundError("No teensy buzzer found");
 			}
 		} else {
 			this.device = new HID.HID(deviceInfo.path);
@@ -40,7 +41,6 @@ export class TeensyBuzzer implements Buzzer {
 
 		this.handlers = [];
 		this.device.on("data", (signal) => {
-			console.log('data !');
 			var controllerIndex = signal[0];
 			callHandlers(this.handlers['c'+controllerIndex], controllerIndex, 0);
 			callHandlers(this.handlers['all'], controllerIndex, 0);

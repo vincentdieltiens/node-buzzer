@@ -36,7 +36,7 @@ export class TeensyBuzzer implements Buzzer {
 			this.device = new HID.HID(deviceInfo.path);
 		}
 
-		this.buzzersCount = 2;
+		this.buzzersCount = 3;
 		this.eventListeners = { 'ready': [], 'leave': [] };
 
 		this.handlers = [];

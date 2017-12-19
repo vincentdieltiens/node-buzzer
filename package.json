@@ -14,7 +14,6 @@
     "rpio": "^0.9.12"
   },
   "scripts": {
-    "install": "npm run build",
     "build": "gulp es6 && gulp examples",
     "dev": "gulp"
   },

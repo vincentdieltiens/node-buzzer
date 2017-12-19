@@ -5,13 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.WebBuzzer = undefined;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _buzzer = require('../websocket/buzzer');
-
-var _ip = require('ip');
-
-var ip = _interopRequireWildcard(_ip);
 
 var _express = require('express');
 
@@ -41,20 +35,6 @@ var WebBuzzer = exports.WebBuzzer = function (_WebsocketBuzzer) {
 		_this.app = app;
 		return _this;
 	}
-
-	_createClass(WebBuzzer, [{
-		key: 'initWebapp',
-		value: function initWebapp() {
-			var _this2 = this;
-
-			this.app.get('/buzzer', function (request, response) {
-				response.render('buzzer', {
-					ip: ip.address(),
-					port: _this2.port
-				});
-			});
-		}
-	}]);
 
 	return WebBuzzer;
 }(_buzzer.WebsocketBuzzer);

@@ -3,7 +3,6 @@
 
 import * as ip from 'ip';
 import * as ws from 'nodejs-websocket';
-import { Buzzer } from '../buzzer';
 
 function callHandlers(handlers/*:Array<Function>*/, controllerIndex/*:number*/, buttonIndex/*:number*/) {
 	if (!handlers) {

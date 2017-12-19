@@ -16,20 +16,26 @@ gulp.task('es6', () =>
         .pipe(gulp.dest('es5'))
 );
 
-gulp.task('examples', () =>
+gulp.task('examples', () => {
     gulp.src(['examples/*.js'])
         .pipe(sourcemaps.init())
         .pipe(babel({
             presets: ['env']
         }))
         .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('es5/examples'))
-);
+        .pipe(gulp.dest('es5/examples'));
+
+    gulp.src(['examples/views/**/*'])
+        .pipe(gulp.dest('es5/examples/views'));
+
+    gulp.src(['examples/public/**/*'])
+        .pipe(gulp.dest('es5/examples/public'));
+});
 
 
 gulp.task('watch', () => {
     gulp.watch(['./index.js', 'src/**/*.js'], ['es6']);
-    gulp.watch([ 'examples/*.js'], ['examples']);
+    gulp.watch([ 'examples/**/*'], ['examples']);
 });
 
 gulp.task('default', ['es6', 'examples', 'watch']);

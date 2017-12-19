@@ -1,0 +1,5 @@
+<div class="buzzers">
+	<div class="vertical-align" ng-repeat="(controllerIndex, buzzer) in buzzers.buzzers">
+		<div class="buzzer" ng-class="{ on: buzzer.on }" ng-click="buzzers.press(controllerIndex)"></div>
+	</div>
+</div>

@@ -1,1 +1,4 @@
 node_modules
+dist
+es5
+.DS_STORE

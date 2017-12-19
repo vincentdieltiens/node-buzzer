@@ -14,7 +14,7 @@
     "rpio": "^0.9.12"
   },
   "scripts": {
-    "postinstall": "npm run build",
+    "postinstall": "npm install && npm run build",
     "build": "gulp es6 && gulp examples",
     "dev": "gulp"
   },

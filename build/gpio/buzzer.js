@@ -1,5 +1,6 @@
 "use strict";
-var rpio = require('rpio');
+Object.defineProperty(exports, "__esModule", { value: true });
+var rpio = require("rpio");
 ;
 var GPIOBuzzer = (function () {
     function GPIOBuzzer(buttons) {

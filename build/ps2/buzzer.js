@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 var signals = [
     [0, 0, 1, 0, 240],
     [0, 0, 16, 0, 240],

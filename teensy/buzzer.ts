@@ -18,6 +18,7 @@ export class TeensyBuzzer implements Buzzer {
 	handlers: Array<Array<Function>>;
 	buzzersCount: number;
 	constructor() {
+		console.log('ici');
 		var devices = HID.devices()
 		var deviceInfo = devices.find( function(d) {
 			return d.vendorId===0x16C0 

@@ -1,5 +1,7 @@
 "use strict";
-var HID = require('node-hid');
+Object.defineProperty(exports, "__esModule", { value: true });
+var BuzzerNotFoundError_1 = require("../BuzzerNotFoundError");
+var HID = require("node-hid");
 function callHandlers(handlers, controllerIndex, buttonIndex) {
     if (!handlers) {
         return;
@@ -11,6 +13,7 @@ function callHandlers(handlers, controllerIndex, buttonIndex) {
 var TeensyBuzzer = (function () {
     function TeensyBuzzer() {
         var _this = this;
+        console.log('ici');
         var devices = HID.devices();
         var deviceInfo = devices.find(function (d) {
             return d.vendorId === 0x16C0
@@ -23,17 +26,16 @@ var TeensyBuzzer = (function () {
                 this.device = new HID.HID(5824, 1158);
             }
             catch (e) {
-                throw new Error("No buzzer found");
+                throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No teensy buzzer found");
             }
         }
         else {
             this.device = new HID.HID(deviceInfo.path);
         }
-        this.buzzersCount = 2;
+        this.buzzersCount = 3;
         this.eventListeners = { 'ready': [], 'leave': [] };
         this.handlers = [];
         this.device.on("data", function (signal) {
-            console.log('data !');
             var controllerIndex = signal[0];
             callHandlers(_this.handlers['c' + controllerIndex], controllerIndex, 0);
             callHandlers(_this.handlers['all'], controllerIndex, 0);

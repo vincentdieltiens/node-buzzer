@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "es6-error": "^4.0.2",
+    "ip": "^1.1.5",
     "node-hid": "^0.5.7",
     "nodejs-websocket": "^1.7.1",
     "rpio": "^0.9.12"

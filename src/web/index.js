@@ -1,1 +1,3 @@
-export { WebBuzzer } from './buzzer'
+'use strict';
+
+export { WebBuzzer } from './buzzer';

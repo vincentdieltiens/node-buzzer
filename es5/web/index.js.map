@@ -1,1 +1,1 @@
-{"version":3,"sources":["web/index.js"],"names":["WebBuzzer"],"mappings":";;;;;;;;;;;mBAASA,S","file":"index.js","sourcesContent":["export { WebBuzzer } from './buzzer'"]}
+{"version":3,"sources":["web/index.js"],"names":["WebBuzzer"],"mappings":"AAAA;;;;;;;;;;;mBAESA,S","file":"index.js","sourcesContent":["'use strict';\n\nexport { WebBuzzer } from './buzzer';"]}

@@ -1,6 +1,4 @@
-
 import * as rpio from 'rpio';
-import { Buzzer } from '../buzzer';
 
 export class GPIOBuzzer /*implements Buzzer*/ {
 	constructor(buttons/*:Array<GPIODomePushButton>*/) {

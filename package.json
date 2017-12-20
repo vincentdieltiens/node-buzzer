@@ -8,6 +8,7 @@
     "url": "http://github.com/vincentdieltiens/node-buzzer.git"
   },
   "dependencies": {
+    "es6-error": "^4.0.2",
     "node-hid": "^0.5.7",
     "nodejs-websocket": "^1.7.1",
     "rpio": "^0.9.12"
@@ -25,7 +26,6 @@
     "babel-core": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-es2015": "^6.24.1",
-    "es6-error": "^4.0.2",
     "express": "^4.16.2",
     "express-handlebars": "^3.0.0",
     "gulp": "^3.9.1",

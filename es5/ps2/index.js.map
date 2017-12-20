@@ -1,1 +1,1 @@
-{"version":3,"sources":["ps2/index.js"],"names":["Ps2Buzzer"],"mappings":";;;;;;;;;;;mBAASA,S","file":"index.js","sourcesContent":["export { Ps2Buzzer } from './buzzer'"]}
+{"version":3,"sources":["ps2/index.js"],"names":["Ps2Buzzer"],"mappings":"AAAA;;;;;;;;;;;mBAESA,S","file":"index.js","sourcesContent":["'use strict';\n\nexport { Ps2Buzzer } from './buzzer'"]}

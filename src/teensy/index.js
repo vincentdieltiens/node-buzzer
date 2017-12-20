@@ -1,3 +1,3 @@
 'use strict';
 
-export { TeensyBuzzer } from './buzzer'
+export { TeensyBuzzer } from './buzzer';

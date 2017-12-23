@@ -1,7 +1,9 @@
 'use strict';
 
 import * as HID from 'node-hid';
+import { Buzzer } from '../Buzzer';
 import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
+import { BuzzerReadError } from '../BuzzerReadError';
 
 var signals = [
 	// controller 1
@@ -48,36 +50,48 @@ function searchSignalIndex(signal)/*: number*/ {
 	return -1;
 }
 
-function callHandlers(handlers/*:Array<Function>*/, controllerIndex/*:number*/, buttonIndex/*:number*/) {
-	if (!handlers) {
-		return;
-	}
-
-	for (var i in handlers) {
-		handlers[i](controllerIndex, buttonIndex);
-	}
-}
-
-export class Ps2Buzzer /*implements Buzzer*/ {
-	//device/*: HID*/.HID;
-	//lights/*: Array*/<any>;
-	//handlers/*: Array*/<Array<Function>>;
-	//eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-	constructor(device) {
-		if (!device) {
-			try {
-				device = new HID.HID(0x054c, 0x1000);
-			} catch(e) {
-				throw new BuzzerNotFoundError("No PS2 Buzzer found :"+e.message);
-			}
-		}
-		this.device = device
-
-
-		this.eventListeners = { 'ready': [], 'leave': [] };
-		this.lights = [0x0, 0x0, 0x0, 0x0]
-
+export class Ps2Buzzer extends Buzzer {
+	constructor(device=null) {
+		super();
+		this.eventListeners = { 'ready': [], 'leave': [], 'error': [] };
+		this.lights = [0x0, 0x0, 0x0, 0x0];
 		this.handlers = [];
+	}
+
+	connect(timeout) {
+		this.timeout = timeout;
+		this.waitForDevice();
+	}
+
+	waitForDevice() {
+		let interval;
+		let startTime = Date.now();
+		let tick = () => {
+			let currentTime = Date.now();
+			if (currentTime - startTime > this.timeout) {
+				clearInterval(interval);
+				this.triggerEvent('error', new BuzzerNotFoundError('PS2 buzzer not found'));
+			}
+
+			if (!this.device) {
+				try {
+					this.device = new HID.HID(0x054c, 0x1000);
+					clearInterval(interval);
+				} catch(e) {
+					return; // Do not init at this tick
+				}
+			} else {
+				clearInterval(interval);
+			}
+
+			this.init();
+		};
+		interval = setInterval(tick, 1000);
+		tick();
+	}
+
+	init(device) {
+		this.triggerEvent('ready');
 		this.device.on("data", (signal) => {
 			var signalIndex = searchSignalIndex(signal);
 			if (signalIndex >= 0) {
@@ -85,32 +99,19 @@ export class Ps2Buzzer /*implements Buzzer*/ {
 				var buttonIndex = signalIndex % 5;
 
 				var key = 'c'+controllerIndex+'b'+buttonIndex;
-				callHandlers(this.handlers[key], controllerIndex, buttonIndex);
+				this.callHandlers(key, controllerIndex, buttonIndex);
 
 				key = 'c'+controllerIndex;
-				callHandlers(this.handlers[key], controllerIndex, buttonIndex);
-
-				callHandlers(this.handlers['all'], controllerIndex, buttonIndex);
+				this.callHandlers(key, controllerIndex, buttonIndex);
+				this.callHandlers('all', controllerIndex, buttonIndex);
 			}
 		});
 
-		this.device.on("error", () => {
-			this.eventListeners['leave'].forEach((f) => {
-				f();
-			});
+		this.device.on("error", (e) => {
+			let error = new BuzzerReadError(e);
+			this.triggerEvent('error', error);
+			this.triggerEvent('leave', error);
 		});
-	}
-
-	addEventListener(event/*: string*/, callback/*: Function*/) {
-		this.eventListeners[event].push(callback);
-		if (event == 'ready') {
-			callback();
-		}
-	}
-
-	removeEventListener(event/*: string*/, callback/*: Function*/) {
-		var index = this.eventListeners[event].indexOf(callback);
-		this.eventListeners[event].splice(index, 1);
 	}
 
 	leave() {
@@ -166,30 +167,6 @@ export class Ps2Buzzer /*implements Buzzer*/ {
 			on = !on;
 
 		}, duration);
-	}
-
-	onPress(callback/*: Function*/, controllerIndex/*: number*/ = undefined, buttonIndex/*: number*/ = undefined)/*: Function*/ {
-		var key = 'all';
-		if (controllerIndex != undefined || buttonIndex != undefined) {
-			key = '';
-			if (controllerIndex != undefined) {
-				key = 'c'+controllerIndex;
-			}
-			if (buttonIndex != undefined) {
-				key += 'b'+buttonIndex
-			}
-		}
-
-		if (!(key in this.handlers)) {
-			this.handlers[key] = [];
-		}
-		this.handlers[key].push(callback);
-		return () => {
-			var index = this.handlers[key].indexOf(callback);
-			if (index >= 0) {
-				this.handlers[key].splice(index, 1);
-			}
-		};
 	}
 
 	controllersCount()/*:number*/ {

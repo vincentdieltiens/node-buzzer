@@ -3,50 +3,24 @@
 
 import * as ip from 'ip';
 import * as ws from 'nodejs-websocket';
+import { Buzzer } from '../Buzzer';
+import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
+import { BuzzerReadError } from '../BuzzerReadError';
 
-function callHandlers(handlers/*:Array<Function>*/, controllerIndex/*:number*/, buttonIndex/*:number*/) {
-	if (!handlers) {
-		return;
-	}
+export class WebsocketBuzzer extends Buzzer {
 
-	for (var i in handlers) {
-		handlers[i](controllerIndex, buttonIndex);
-	}
-}
-
-export class WebsocketBuzzer /*implements Buzzer*/ {
-	// The websocket server, Connection & port
-	//ws: ws.Server;
-	//conn: ws.Connection;
-	//port: number;
-
-	// listeners
-	//handlers: Array<Array<Function>>;
-
-	//eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-
-	constructor(port/*:number*/=8083) {
+	constructor(port=8083) {
+		super();
 		this.port = port;
 		this.handlers = [];
-
-		this.eventListeners = { 'ready': [], 'leave': [] };
-		
-		this.initWebsocket()
 	}
 
-	addEventListener(event/*: string*/, callback/*: Function*/) {
-		this.eventListeners[event].push(callback);
-		if (event == 'ready' && this.conn) {
-			callback();
-		}
+	connect(timeout=8000) {
+		this.timeout = timeout;
+		this.initWebsocket();
 	}
 
-	removeEventListener(event/*: string*/, callback/*: Function*/) {
-		var index = this.eventListeners[event].indexOf(callback);
-		this.eventListeners[event].splice(index, 1);
-	}
-
-	leave()/*: void*/ {
+	leave() {
 		this.ws.close();
 	}
 
@@ -67,38 +41,29 @@ export class WebsocketBuzzer /*implements Buzzer*/ {
 	blink(controllerIndexes/*:Array<number>*/, times/*:number*/=5, duration/*:number*/=0.2) {
 	}
 
-	onPress(callback/*: Function*/, controllerIndex/*?:number*/=undefined, buttonIndex/*?:number*/=undefined)/*: Function*/ {
-		var key = 'all';
-		if (controllerIndex != undefined || buttonIndex != undefined) {
-			key = '';
-			if (controllerIndex != undefined) {
-				key = 'c'+controllerIndex;
-			}
-			if (buttonIndex != undefined) {
-				key += 'b'+buttonIndex
-			}
-		}
-
-		if (!(key in this.handlers)) {
-			this.handlers[key] = [];
-		}
-		this.handlers[key].push(callback);
-		return () => {
-			var index = this.handlers[key].indexOf(callback);
-			if (index >= 0) {
-				this.handlers[key].splice(index, 1);
-			}
-		};		
-	}
-
 	initWebsocket() {
 		console.log('WebBuzzer : listening ws on '+this.port);
+
+		let interval;
+		let startTime = Date.now();
+		let tick = () => {
+			let currentTime = Date.now();
+			if (currentTime - startTime > this.timeout) {
+				clearInterval(interval);
+				if (this.ws) {
+					this.ws.close();
+				}
+				this.triggerEvent('error', new BuzzerNotFoundError('PS2 buzzer not found'));
+			}
+		};
+		interval = setInterval(tick, 1000);
+		tick();
+
 		this.ws = ws.createServer((conn) => {
 			this.conn = conn;
 
-			this.eventListeners['ready'].forEach((f) => {
-				f();
-			});
+			clearInterval(interval);
+			this.triggerEvent('ready');
 
 			conn.on("text", (str/*:string*/) => {
 				var data = JSON.parse(str);
@@ -108,17 +73,14 @@ export class WebsocketBuzzer /*implements Buzzer*/ {
 					var buttonIndex = 0;
 					
 					var key = 'c'+controllerIndex;
-					callHandlers(this.handlers[key], controllerIndex, buttonIndex);
-
-					callHandlers(this.handlers['all'], controllerIndex, buttonIndex);					
+					this.callHandlers(key, controllerIndex, buttonIndex);
+					this.callHandlers('all', controllerIndex, buttonIndex);					
 				}
 			});
 
 			conn.on("close", (code/*:number*/, reason/*:string*/) => {
 				this.conn = null;
-				this.eventListeners['leave'].forEach((f) => {
-					f();
-				});
+				this.triggerEvent('leave', new BuzzerReadError(reason));
 			});
 		}).listen(this.port);
 	}

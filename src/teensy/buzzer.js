@@ -1,25 +1,30 @@
 'use strict';
 
-//import { Buzzer } from '../buzzer';
-import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
 import * as HID from 'node-hid';
+import { Buzzer } from '../Buzzer';
+import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
+import { BuzzerReadError } from '../BuzzerReadError';
 
-function callHandlers(handlers, controllerIndex, buttonIndex) {
-	if (!handlers) {
-		return;
-	}
-
-	for (var i in handlers) {
-		handlers[i](controllerIndex, buttonIndex);
+function getDevice(deviceInfo) {
+	if (!deviceInfo) {
+		return new HID.HID(5824, 1158);
+	} else {
+		return new HID.HID(deviceInfo.path);
 	}
 }
 
-export class TeensyBuzzer /*implements Buzzer*/ {
-	//device: HID.HID;
-	//eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-	//handlers: Array<Array<Function>>;
-	//buzzersCount: number;
+export class TeensyBuzzer extends Buzzer {
 	constructor(buzzersCount = 4) {
+		super();
+		this.buzzersCount = buzzersCount;
+	}
+
+	connect(timeout=30000) {
+		this.timeout = timeout;
+		this.waitForDevice();
+	}
+
+	waitForDevice() {
 		var devices = HID.devices()
 		var deviceInfo = devices.find( function(d) {
 			return d.vendorId===0x16C0 
@@ -27,44 +32,41 @@ export class TeensyBuzzer /*implements Buzzer*/ {
 					&& d.usagePage===0xFFAB 
 					&& d.usage===0x200;
 		});
-		
-		if (!deviceInfo) {
-			try {
-				this.device = new HID.HID(5824, 1158);
-			} catch(e) {
-				throw new BuzzerNotFoundError("No teensy buzzer found");
+
+		let interval;
+		let startTime = Date.now();
+		let tick = () => {
+			let currentTime = Date.now();
+			if (currentTime - startTime > this.timeout) {
+				clearInterval(interval);
+				this.triggerEvent('error', new BuzzerNotFoundError('Teensy buzzer not found'));
 			}
-		} else {
-			this.device = new HID.HID(deviceInfo.path);
+
+			try {
+				this.device = getDevice(deviceInfo);
+				clearInterval(interval);
+				this.init();
+			} catch(e) {
+				// do nothing
+			}
 		}
+		interval = setInterval(tick, 1000);
+		tick();
+	}
 
-		this.buzzersCount = buzzersCount;
-		this.eventListeners = { 'ready': [], 'leave': [] };
-
-		this.handlers = [];
+	init() {
+		this.triggerEvent('ready');
 		this.device.on("data", (signal) => {
 			var controllerIndex = signal[0];
-			callHandlers(this.handlers['c'+controllerIndex], controllerIndex, 0);
-			callHandlers(this.handlers['all'], controllerIndex, 0);
+			this.callHandlers('c'+controllerIndex, controllerIndex, 0);
+			this.callHandlers('all', controllerIndex, 0);
 		});
 
-		this.device.on("error", () => {
-			this.eventListeners['leave'].forEach((f) => {
-				f();
-			});
+		this.device.on("error", (e) => {
+			let error = new BuzzerReadError(e);
+			this.triggerEvent('error', error);
+			this.triggerEvent('leave', error);
 		});
-	}
-
-	addEventListener(event/*: string*/, callback/*: Function*/) {
-		this.eventListeners[event].push(callback);
-		if (event == 'ready') {
-			callback();
-		}
-	}
-
-	removeEventListener(event/*: string*/, callback/*: Function*/) {
-		var index = this.eventListeners[event].indexOf(callback);
-		this.eventListeners[event].splice(index, 1);
 	}
 
 	leave() {
@@ -126,30 +128,6 @@ export class TeensyBuzzer /*implements Buzzer*/ {
 			on = !on;
 
 		}, duration);
-	}
-
-	onPress(callback/*: Function*/, controllerIndex/*: number*/, buttonIndex/*: number*/)/*: Function */{
-		var key = 'all';
-		if (controllerIndex != undefined || buttonIndex != undefined) {
-			key = '';
-			if (controllerIndex != undefined) {
-				key = 'c'+controllerIndex;
-			}
-			if (buttonIndex != undefined) {
-				key += 'b'+buttonIndex
-			}
-		}
-
-		if (!(key in this.handlers)) {
-			this.handlers[key] = [];
-		}
-		this.handlers[key].push(callback);
-		return () => {
-			var index = this.handlers[key].indexOf(callback);
-			if (index >= 0) {
-				this.handlers[key].splice(index, 1);
-			}
-		};
 	}
 
 	controllersCount()/*:number*/ {

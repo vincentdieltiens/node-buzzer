@@ -28,7 +28,7 @@ app.get('/', (request, response) => {
 });
 app.listen(port, () => {
 	console.log('Web app : listening on '+port);
-	console.log('Go to https://127.0.0.1:'+port);
+	console.log('Go to http://127.0.0.1:'+port);
 });
 
 let buzzer = new WebBuzzer(app, wsPort);
@@ -43,7 +43,17 @@ buzzer.addEventListener('ready', () => {
 	}
 });
 
+buzzer.addEventListener('error', (e) => {
+	console.log('error...', e)
+});
+
+buzzer.addEventListener('leave', (e) => {
+	console.log('leave...', e)
+});
+
 buzzer.onPress((controllerIndex, buttonIndex) => {
 	console.log('buzz !', controllerIndex, buttonIndex);
 	buzzer.blink(controllerIndex, 2, 100)
 });
+
+buzzer.connect(8000);

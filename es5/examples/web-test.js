@@ -38,7 +38,7 @@ app.get('/', function (request, response) {
 });
 app.listen(port, function () {
 	console.log('Web app : listening on ' + port);
-	console.log('Go to https://127.0.0.1:' + port);
+	console.log('Go to http://127.0.0.1:' + port);
 });
 
 var buzzer = new _web.WebBuzzer(app, wsPort);
@@ -53,8 +53,18 @@ buzzer.addEventListener('ready', function () {
 	}
 });
 
+buzzer.addEventListener('error', function (e) {
+	console.log('error...', e);
+});
+
+buzzer.addEventListener('leave', function (e) {
+	console.log('leave...', e);
+});
+
 buzzer.onPress(function (controllerIndex, buttonIndex) {
 	console.log('buzz !', controllerIndex, buttonIndex);
 	buzzer.blink(controllerIndex, 2, 100);
 });
+
+buzzer.connect(8000);
 //# sourceMappingURL=web-test.js.map

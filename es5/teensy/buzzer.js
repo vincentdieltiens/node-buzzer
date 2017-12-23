@@ -1,7 +1,5 @@
 'use strict';
 
-//import { Buzzer } from '../buzzer';
-
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
@@ -9,83 +7,101 @@ exports.TeensyBuzzer = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _BuzzerNotFoundError = require('../BuzzerNotFoundError');
-
 var _nodeHid = require('node-hid');
 
 var HID = _interopRequireWildcard(_nodeHid);
+
+var _Buzzer2 = require('../Buzzer');
+
+var _BuzzerNotFoundError = require('../BuzzerNotFoundError');
+
+var _BuzzerReadError = require('../BuzzerReadError');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function callHandlers(handlers, controllerIndex, buttonIndex) {
-	if (!handlers) {
-		return;
-	}
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-	for (var i in handlers) {
-		handlers[i](controllerIndex, buttonIndex);
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function getDevice(deviceInfo) {
+	if (!deviceInfo) {
+		return new HID.HID(5824, 1158);
+	} else {
+		return new HID.HID(deviceInfo.path);
 	}
 }
 
-var TeensyBuzzer /*implements Buzzer*/ = exports.TeensyBuzzer = function () {
-	//device: HID.HID;
-	//eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-	//handlers: Array<Array<Function>>;
-	//buzzersCount: number;
-	function TeensyBuzzer() {
-		var _this = this;
+var TeensyBuzzer = exports.TeensyBuzzer = function (_Buzzer) {
+	_inherits(TeensyBuzzer, _Buzzer);
 
+	function TeensyBuzzer() {
 		var buzzersCount = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 4;
 
 		_classCallCheck(this, TeensyBuzzer);
 
-		var devices = HID.devices();
-		var deviceInfo = devices.find(function (d) {
-			return d.vendorId === 0x16C0 && d.productId === 0x0486 && d.usagePage === 0xFFAB && d.usage === 0x200;
-		});
+		var _this = _possibleConstructorReturn(this, (TeensyBuzzer.__proto__ || Object.getPrototypeOf(TeensyBuzzer)).call(this));
 
-		if (!deviceInfo) {
-			try {
-				this.device = new HID.HID(5824, 1158);
-			} catch (e) {
-				throw new _BuzzerNotFoundError.BuzzerNotFoundError("No teensy buzzer found");
-			}
-		} else {
-			this.device = new HID.HID(deviceInfo.path);
-		}
-
-		this.buzzersCount = buzzersCount;
-		this.eventListeners = { 'ready': [], 'leave': [] };
-
-		this.handlers = [];
-		this.device.on("data", function (signal) {
-			var controllerIndex = signal[0];
-			callHandlers(_this.handlers['c' + controllerIndex], controllerIndex, 0);
-			callHandlers(_this.handlers['all'], controllerIndex, 0);
-		});
-
-		this.device.on("error", function () {
-			_this.eventListeners['leave'].forEach(function (f) {
-				f();
-			});
-		});
+		_this.buzzersCount = buzzersCount;
+		return _this;
 	}
 
 	_createClass(TeensyBuzzer, [{
-		key: 'addEventListener',
-		value: function addEventListener(event /*: string*/, callback /*: Function*/) {
-			this.eventListeners[event].push(callback);
-			if (event == 'ready') {
-				callback();
-			}
+		key: 'connect',
+		value: function connect() {
+			var timeout = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 30000;
+
+			this.timeout = timeout;
+			this.waitForDevice();
 		}
 	}, {
-		key: 'removeEventListener',
-		value: function removeEventListener(event /*: string*/, callback /*: Function*/) {
-			var index = this.eventListeners[event].indexOf(callback);
-			this.eventListeners[event].splice(index, 1);
+		key: 'waitForDevice',
+		value: function waitForDevice() {
+			var _this2 = this;
+
+			var devices = HID.devices();
+			var deviceInfo = devices.find(function (d) {
+				return d.vendorId === 0x16C0 && d.productId === 0x0486 && d.usagePage === 0xFFAB && d.usage === 0x200;
+			});
+
+			var interval = void 0;
+			var startTime = Date.now();
+			var tick = function tick() {
+				var currentTime = Date.now();
+				if (currentTime - startTime > _this2.timeout) {
+					clearInterval(interval);
+					_this2.triggerEvent('error', new _BuzzerNotFoundError.BuzzerNotFoundError('Teensy buzzer not found'));
+				}
+
+				try {
+					_this2.device = getDevice(deviceInfo);
+					clearInterval(interval);
+					_this2.init();
+				} catch (e) {
+					// do nothing
+				}
+			};
+			interval = setInterval(tick, 1000);
+			tick();
+		}
+	}, {
+		key: 'init',
+		value: function init() {
+			var _this3 = this;
+
+			this.triggerEvent('ready');
+			this.device.on("data", function (signal) {
+				var controllerIndex = signal[0];
+				_this3.callHandlers('c' + controllerIndex, controllerIndex, 0);
+				_this3.callHandlers('all', controllerIndex, 0);
+			});
+
+			this.device.on("error", function (e) {
+				var error = new _BuzzerReadError.BuzzerReadError(e);
+				_this3.triggerEvent('error', error);
+				_this3.triggerEvent('leave', error);
+			});
 		}
 	}, {
 		key: 'leave',
@@ -135,7 +151,7 @@ var TeensyBuzzer /*implements Buzzer*/ = exports.TeensyBuzzer = function () {
 	}, {
 		key: 'blink',
 		value: function blink(controllerIndexes, times, duration) {
-			var _this2 = this;
+			var _this4 = this;
 
 			var on = true;
 			var count = 0;
@@ -145,41 +161,14 @@ var TeensyBuzzer /*implements Buzzer*/ = exports.TeensyBuzzer = function () {
 						clearInterval(interval);
 						return;
 					}
-					_this2.lightOn(controllerIndexes);
+					_this4.lightOn(controllerIndexes);
 					count++;
 				} else {
-					_this2.lightOff(controllerIndexes);
+					_this4.lightOff(controllerIndexes);
 				}
 
 				on = !on;
 			}, duration);
-		}
-	}, {
-		key: 'onPress',
-		value: function onPress(callback /*: Function*/, controllerIndex /*: number*/, buttonIndex /*: number*/) /*: Function */{
-			var _this3 = this;
-
-			var key = 'all';
-			if (controllerIndex != undefined || buttonIndex != undefined) {
-				key = '';
-				if (controllerIndex != undefined) {
-					key = 'c' + controllerIndex;
-				}
-				if (buttonIndex != undefined) {
-					key += 'b' + buttonIndex;
-				}
-			}
-
-			if (!(key in this.handlers)) {
-				this.handlers[key] = [];
-			}
-			this.handlers[key].push(callback);
-			return function () {
-				var index = _this3.handlers[key].indexOf(callback);
-				if (index >= 0) {
-					_this3.handlers[key].splice(index, 1);
-				}
-			};
 		}
 	}, {
 		key: 'controllersCount',
@@ -189,5 +178,5 @@ var TeensyBuzzer /*implements Buzzer*/ = exports.TeensyBuzzer = function () {
 	}]);
 
 	return TeensyBuzzer;
-}();
+}(_Buzzer2.Buzzer);
 //# sourceMappingURL=buzzer.js.map

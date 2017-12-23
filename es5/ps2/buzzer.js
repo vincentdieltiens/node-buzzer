@@ -71,7 +71,9 @@ var Ps2Buzzer = exports.Ps2Buzzer = function (_Buzzer) {
 
 	_createClass(Ps2Buzzer, [{
 		key: 'connect',
-		value: function connect(timeout) {
+		value: function connect() {
+			var timeout = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
 			this.timeout = timeout;
 			this.waitForDevice();
 		}
@@ -84,7 +86,7 @@ var Ps2Buzzer = exports.Ps2Buzzer = function (_Buzzer) {
 			var startTime = Date.now();
 			var tick = function tick() {
 				var currentTime = Date.now();
-				if (currentTime - startTime > _this2.timeout) {
+				if (_this2.timeout > 0 && currentTime - startTime > _this2.timeout) {
 					clearInterval(interval);
 					_this2.triggerEvent('error', new _BuzzerNotFoundError.BuzzerNotFoundError('PS2 buzzer not found'));
 				}

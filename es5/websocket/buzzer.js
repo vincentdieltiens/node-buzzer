@@ -48,7 +48,7 @@ var WebsocketBuzzer = exports.WebsocketBuzzer = function (_Buzzer) {
 	_createClass(WebsocketBuzzer, [{
 		key: 'connect',
 		value: function connect() {
-			var timeout = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 8000;
+			var timeout = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
 
 			this.timeout = timeout;
 			this.initWebsocket();
@@ -91,7 +91,7 @@ var WebsocketBuzzer = exports.WebsocketBuzzer = function (_Buzzer) {
 			var startTime = Date.now();
 			var tick = function tick() {
 				var currentTime = Date.now();
-				if (currentTime - startTime > _this2.timeout) {
+				if (_this2.timeout > 0 && currentTime - startTime > _this2.timeout) {
 					clearInterval(interval);
 					if (_this2.ws) {
 						_this2.ws.close();

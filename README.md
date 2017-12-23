@@ -33,25 +33,27 @@ PS2 buzzer is using HID protocol (vendorId: 0x054c, productId: 0x100).
 import { Ps2Buzzer, BuzzerNotFoundError } from 'node-buzzer';
 
 // Trying to "connect" to PS2 buzzer
-try {
-    let buzzer = new Ps2Buzzer();
-    
-    buzzer.addEventListener('ready', () => {
-        // Buzzer ready
-    });
-    
-    // Buzzer pressing callback
-    // controllerIndex : 0 to 3 to tell with controller buzzed
-    // buttonIndex : 0 to 4 to tell with button has been pressed (0: big dome button, 1: blue, 2: orange: 3: green, 4: yellow)
-    buzzer.onPress((controllerIndex, buttonIndex) => {
-        console.log('buzz !', controllerIndex, buttonIndex);
-        buzzer.blink(controllerIndex, 2, 100)
-    });
-} catch(e) {
-    if (e instanceof BuzzerNotFoundError) {
-        console.log(e); // PS 2 buzzer is not plugged in
-    }
-}
+let buzzer = new Ps2Buzzer();
+let timeout = 5000; // 5000 ms / 5 s
+buzzer.addEventListener('ready', () => {
+    // Buzzer ready
+});
+
+buzzer.addEventListener('error', (e) => {
+    // Buzzer error
+    // a BuzzerNotFoundError if the buzzer is not found before the timeout
+    // a BuzzerReadError if the buzzer is disconnected
+});
+
+// Buzzer pressing callback
+// controllerIndex : 0 to 3 to tell with controller buzzed
+// buttonIndex : 0 to 4 to tell with button has been pressed (0: big dome button, 1: blue, 2: orange: 3: green, 4: yellow)
+buzzer.onPress((controllerIndex, buttonIndex) => {
+    console.log('buzz !', controllerIndex, buttonIndex);
+    buzzer.blink(controllerIndex, 2, 100)
+});
+
+buzzer.connect(timeout);
 ```
 
 **Restriction :** PS2 Controllers can not be controlled independently. By example: you can't make then blink separately. This is because it uses one message to speak to all the controllers. By example to turn on buzzer 1 and 2 it sends something like this `[off, on, on, off]`
@@ -75,6 +77,7 @@ As for the PS2 buzzer, the HID protocol lets to interact with a computer. But un
 import { TeensyBuzzer } from 'node-buzzer';
 
 let buzzer = new TeensyBuzzer(); // Exception trigger is no buzzer plugged in
+let timeout = 5000; // 5000 ms / 5 s
 
 buzzer.addEventListener('ready', () => {
     console.log('Buzzer ready ! Push any button');
@@ -85,17 +88,25 @@ buzzer.addEventListener('ready', () => {
     }
 });
 
+buzzer.addEventListener('error', (e) => {
+    // Buzzer error
+    // a BuzzerNotFoundError if the buzzer is not found before the timeout
+    // a BuzzerReadError if the buzzer is disconnected
+});
+
 buzzer.onPress((controllerIndex, buttonIndex) => {
     console.log('buzz !', controllerIndex, buttonIndex);
     buzzer.blink(controllerIndex, 2, 100)
 });
+
+buzzer.connect(timeout);
 ```
 
 NB : contact me if you need more informations about my own buzzer :)
 
 Create new Buzzers
 ------------------
-All buzzers "respect" an interface :
+All buzzers extend the 'Buzzer' super class and "respect" the following interface :
 ```typescript
 /**
  * Attaches a listener on an event
@@ -107,6 +118,12 @@ addEventListener(event: string, callabck: Function): void
  * Removes a listener on an event
  */
 removeEventListener(event: string, callback: Function): void;
+
+/**
+ * Removes a listener on an event
+ * if timeout > 0, a timeout is set
+ */
+connect(timeout): void;
 
 /**
  * Frees all resources used by the buzzer

@@ -15,7 +15,7 @@ export class WebsocketBuzzer extends Buzzer {
 		this.handlers = [];
 	}
 
-	connect(timeout=8000) {
+	connect(timeout=0) {
 		this.timeout = timeout;
 		this.initWebsocket();
 	}
@@ -48,7 +48,7 @@ export class WebsocketBuzzer extends Buzzer {
 		let startTime = Date.now();
 		let tick = () => {
 			let currentTime = Date.now();
-			if (currentTime - startTime > this.timeout) {
+			if (this.timeout > 0 && currentTime - startTime > this.timeout) {
 				clearInterval(interval);
 				if (this.ws) {
 					this.ws.close();

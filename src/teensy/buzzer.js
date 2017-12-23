@@ -19,7 +19,7 @@ export class TeensyBuzzer extends Buzzer {
 		this.buzzersCount = buzzersCount;
 	}
 
-	connect(timeout=30000) {
+	connect(timeout=0) {
 		this.timeout = timeout;
 		this.waitForDevice();
 	}
@@ -37,7 +37,7 @@ export class TeensyBuzzer extends Buzzer {
 		let startTime = Date.now();
 		let tick = () => {
 			let currentTime = Date.now();
-			if (currentTime - startTime > this.timeout) {
+			if (this.timeout > 0 && currentTime - startTime > this.timeout) {
 				clearInterval(interval);
 				this.triggerEvent('error', new BuzzerNotFoundError('Teensy buzzer not found'));
 			}

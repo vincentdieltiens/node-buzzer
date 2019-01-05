@@ -4,14 +4,19 @@ var _teensy = require('../teensy');
 
 var buzzer = new _teensy.TeensyBuzzer(4);
 
+var currentOn = null;
+
 buzzer.addEventListener('ready', function () {
 	console.log('Buzzer ready ! Push any button');
+
 	var max = buzzer.controllersCount();
 
 	// Turn off all lights
 	for (var i = 0; i < max; i++) {
 		buzzer.lightOff(i);
 	}
+
+	//buzzer.lightOn(0);
 });
 
 buzzer.addEventListener('error', function (e) {
@@ -24,7 +29,13 @@ buzzer.addEventListener('leave', function (e) {
 
 buzzer.onPress(function (controllerIndex, buttonIndex) {
 	console.log('buzz !', controllerIndex, buttonIndex);
-	buzzer.blink(controllerIndex, 2, 100);
+	if (currentOn !== null) {
+		console.log('off!');
+		buzzer.lightOff(currentOn);
+	}
+	//buzzer.blink(controllerIndex, 2, 100)
+	buzzer.lightOn(controllerIndex);
+	currentOn = controllerIndex;
 });
 
 buzzer.connect(8000);

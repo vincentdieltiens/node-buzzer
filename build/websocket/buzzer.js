@@ -45,6 +45,9 @@ var WebsocketBuzzer = (function () {
     WebsocketBuzzer.prototype.blink = function (controllerIndexes, times, duration) {
         if (times === void 0) { times = 5; }
         if (duration === void 0) { duration = 0.2; }
+        return new Promise(function (resolve) {
+            resolve();
+        });
     };
     WebsocketBuzzer.prototype.onPress = function (callback, controllerIndex, buttonIndex) {
         var _this = this;

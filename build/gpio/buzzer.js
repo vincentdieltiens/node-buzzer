@@ -29,14 +29,18 @@ var GPIOBuzzer = (function () {
         light.call(this, controllerIndexes, rpio.LOW);
     };
     GPIOBuzzer.prototype.blink = function (controllerIndexes, times, duration) {
+        var _this = this;
         if (times === void 0) { times = 5; }
         if (duration === void 0) { duration = 150; }
-        for (var i = 0; i < times; i++) {
-            this.lightOn(controllerIndexes);
-            rpio.msleep(duration);
-            this.lightOff(controllerIndexes);
-            rpio.msleep(duration);
-        }
+        return new Promise(function (resolve) {
+            for (var i = 0; i < times; i++) {
+                _this.lightOn(controllerIndexes);
+                rpio.msleep(duration);
+                _this.lightOff(controllerIndexes);
+                rpio.msleep(duration);
+            }
+            resolve();
+        });
     };
     GPIOBuzzer.prototype.onPress = function (callback, controllerIndex, buttonIndex) {
         var _this = this;

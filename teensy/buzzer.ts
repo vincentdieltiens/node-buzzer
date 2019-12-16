@@ -2,7 +2,7 @@ import { Buzzer } from '../buzzer';
 import { BuzzerNotFoundError } from '../BuzzerNotFoundError';
 import * as HID from 'node-hid';
 
-function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIndex:number) {
+function callHandlers(handlers: Array<Function>, controllerIndex: number, buttonIndex: number) {
 	if (!handlers) {
 		return;
 	}
@@ -12,39 +12,58 @@ function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIn
 	}
 }
 
+/**
+ * Represents a Teensy Buzzer
+ */
 export class TeensyBuzzer implements Buzzer {
+	/** @var device The HID device */
 	device: HID.HID;
-	eventListeners: { 'ready': Array<Function>, 'leave': Array<Function> };
-	handlers: Array<Array<Function>>;
-	buzzersCount: number;
+
+	/** @var eventListeners The registered event listeners */
+	eventListeners: {
+		'ready': Array<Function>,
+		'leave': Array<Function>,
+		'press': Array<Function>
+	} = {
+			'ready': [],
+			'leave': [],
+			'press': []
+		};
+
+	/** @var handlers The press event listeners */
+	handlers: Array<Array<Function>> = [];
+
+	/** @var buzzersCount the number of buzzers */
+	buzzersCount: number = 4;
+
+	/**
+	 * @internal
+	 *
+	 */
 	constructor() {
-		console.log('ici');
 		var devices = HID.devices()
-		var deviceInfo = devices.find( function(d) {
-			return d.vendorId===0x16C0 
-					&& d.productId===0x0486 
-					&& d.usagePage===0xFFAB 
-					&& d.usage===0x200;
+		var deviceInfo = devices.find(function (d) {
+			return d.vendorId === 0x16C0
+				&& d.productId === 0x0486
+				&& d.usagePage === 0xFFAB
+				&& d.usage === 0x200;
 		});
-		
-		if (!deviceInfo) {
-			try {
+
+		try {
+			if (!deviceInfo) {
 				this.device = new HID.HID(5824, 1158);
-			} catch(e) {
-				throw new BuzzerNotFoundError("No teensy buzzer found");
+			} else {
+				this.device = new HID.HID(deviceInfo.path);
 			}
-		} else {
-			this.device = new HID.HID(deviceInfo.path);
+		} catch (e) {
+			throw new BuzzerNotFoundError("No teensy buzzer found");
 		}
 
-		this.buzzersCount = 3;
-		this.eventListeners = { 'ready': [], 'leave': [] };
-
-		this.handlers = [];
 		this.device.on("data", (signal) => {
 			var controllerIndex = signal[0];
-			callHandlers(this.handlers['c'+controllerIndex], controllerIndex, 0);
+			callHandlers(this.handlers['c' + controllerIndex], controllerIndex, 0);
 			callHandlers(this.handlers['all'], controllerIndex, 0);
+			this.eventListeners['press'].forEach(f => f(controllerIndex, 0));
 		});
 
 		this.device.on("error", () => {
@@ -54,41 +73,54 @@ export class TeensyBuzzer implements Buzzer {
 		});
 	}
 
-	addEventListener(event: string, callback: Function) {
+	/**
+	 * Attaches an listener to an event.
+	 * @param event the event
+	 * @param callback the listener to attach
+	 */
+	addEventListener(event: string, callback: Function): void  {
 		this.eventListeners[event].push(callback);
 		if (event == 'ready') {
 			callback();
 		}
 	}
 
-	removeEventListener(event: string, callback: Function) {
-		var index = this.eventListeners[event].indexOf(callback);
+	/**
+	 * Removes an attached event listener
+	 * @param event the event
+	 * @param callback the listener to remove
+	 */
+	removeEventListener(event: string, callback: Function): void {
+		const index = this.eventListeners[event].indexOf(callback);
 		this.eventListeners[event].splice(index, 1);
 	}
 
+	/**
+	 * Turn the lights off and close the connection
+	 */
 	leave() {
-		for(var i=0; i < this.buzzersCount; i++) {
-			this.light(i, 0x00);
+		for (let i = 0; i < this.buzzersCount; i++) {
+			this.light(i, false);
 		}
-		
 		this.device.close();
 	}
 
-	light(controllerIndexes, value) {
-		if (value != 0x00 && value != 0xFF) {
-			throw new Error("light should have a value of 0x0 or 0xFF")
-		}
-
-		var indexes = [];
-		if (typeof(controllerIndexes) == 'number') {
+	/**
+	 * Turns on or on one or more controllers
+	 * @param controllerIndexes the index
+	 * @param value
+	 */
+	light(controllerIndexes: number | number[], value) {
+		let indexes = [];
+		if (typeof (controllerIndexes) == 'number') {
 			indexes = [controllerIndexes];
 		} else {
 			indexes = controllerIndexes
 		}
-		
-		for(var i=0; i < indexes.length; i++) {
+
+		for (let i = 0; i < indexes.length; i++) {
 			var message = [];
-			for(var j=0; j <= 64; j++) {
+			for (var j = 0; j <= 64; j++) {
 				message[j] = 0x00;
 			}
 			message[0] = 1;
@@ -99,43 +131,73 @@ export class TeensyBuzzer implements Buzzer {
 		}
 	}
 
-	lightOn(controllerIndexes) {
+	/**
+	 * Turns the lights on (for one or more controllers)
+	 * @param controllerIndexes the controller index or indexes
+	 */
+	lightOn(controllerIndexes: number | number[]): void {
 		this.light(controllerIndexes, 0xFF);
 	}
 
-	lightOff(controllerIndexes) {
-		this.light(controllerIndexes, 0x0);
+	/**
+	 * Turns the lights off (for one or more controllers)
+	 * @param controllerIndexes
+	 */
+	lightOff(controllerIndexes : number | number[]): void {
+		this.light(controllerIndexes, 0x00);
 	}
 
-	blink(controllerIndexes, times, duration) {
-		var on = true
-		var count = 0;
-		var interval = setInterval(function() {
-			if (on) {
-				if (count > times) {
+	/**
+	 * Makes one or more controller blinking
+	 * @param controllerIndexes  the controller index or indexes
+	 * @param times the number of on/off cycles
+	 * @param duration the duration of each on/off
+	 * @param lightOnAtEnd (default: true) is the light on at the end of the blining
+	 */
+	blink(controllerIndexes: number | number[], times = 5, duration = 150, lightOnAtEnd = true): Promise<void> {
+		return new Promise((resolve, reject) => {
+			let on = true;
+			let count = 1;
+			let totalTimes = times * 2 - (lightOnAtEnd ? 1 : 0);
+			const _update = () => {
+
+				if (count > totalTimes) {
 					clearInterval(interval);
+					resolve();
 					return;
 				}
-				this.lightOn(controllerIndexes);
+
+				if (on) {
+					this.lightOn(controllerIndexes);
+				} else {
+					this.lightOff(controllerIndexes);
+				}
+
 				count++;
-			} else {
-				this.lightOff(controllerIndexes);
+				on = !on;
 			}
 
-			on = !on;
-
-		}, duration);
+			_update();
+			let interval = setInterval(_update, duration);
+		});
 	}
 
+	/**
+	 * Press event listener
+	 * @param callback the event listener
+	 * @param controllerIndex the index of the controller if listening for a specific controller
+	 * @param buttonIndex the button index if listening for a specific button
+	 * @returns the function to remove the listener
+	 */
 	onPress(callback: Function, controllerIndex: number, buttonIndex: number): Function {
 		var key = 'all';
 		if (controllerIndex != undefined || buttonIndex != undefined) {
 			key = '';
 			if (controllerIndex != undefined) {
-				key = 'c'+controllerIndex;
+				key = 'c' + controllerIndex;
 			}
 			if (buttonIndex != undefined) {
-				key += 'b'+buttonIndex
+				key += 'b' + buttonIndex
 			}
 		}
 
@@ -151,9 +213,11 @@ export class TeensyBuzzer implements Buzzer {
 		};
 	}
 
-	controllersCount():number {
+	/**
+	 * Gets the number of controllers
+	 * @returns the number of controllers
+	 */
+	controllersCount(): number {
 		return this.buzzersCount;
 	}
-
-
 }

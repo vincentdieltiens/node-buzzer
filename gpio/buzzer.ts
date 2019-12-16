@@ -37,7 +37,7 @@ export class GPIOBuzzer implements Buzzer {
 	}
 
 	leave() {
-		closePins.call(this);		
+		closePins.call(this);
 	}
 
 	lightOn(controllerIndexes) {
@@ -48,13 +48,16 @@ export class GPIOBuzzer implements Buzzer {
 		light.call(this, controllerIndexes, rpio.LOW)
 	}
 
-	blink(controllerIndexes:Array<number>, times:number = 5, duration:number = 150): void {
-		for(var i=0; i < times; i++) {
-			this.lightOn(controllerIndexes);
-			rpio.msleep(duration);
-			this.lightOff(controllerIndexes);
-			rpio.msleep(duration);
-		}
+	blink(controllerIndexes:Array<number>, times:number = 5, duration:number = 150): Promise<void> {
+		return new Promise((resolve) => {
+			for(var i=0; i < times; i++) {
+				this.lightOn(controllerIndexes);
+				rpio.msleep(duration);
+				this.lightOff(controllerIndexes);
+				rpio.msleep(duration);
+			}
+			resolve();
+		});
 	}
 
 	onPress(callback: Function, controllerIndex: number = undefined, buttonIndex:number = undefined): Function {
@@ -98,7 +101,7 @@ function light(controllerIndexes, value:number) {
 			rpio.write(this.buttons[i].led, value);
 		}
 	}
-	
+
 }
 
 function openPins() {
@@ -119,7 +122,7 @@ function openPins() {
 				}
 			}
 		});
-		
+
 	});
 }
 

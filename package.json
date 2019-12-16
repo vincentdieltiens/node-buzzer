@@ -13,12 +13,16 @@
     "@types/node": "^6.0.46",
     "@types/rpio": "0.0.1",
     "express": "^4.14.0",
-    "node-hid": "^0.5.2",
+    "ip": "^1.1.5",
+    "node-hid": "^1.1.0",
     "nodejs-websocket": "^1.7.0",
     "rpio": "^0.9.12",
     "ts-node": "^1.3.0"
   },
-  "scripts": {},
+  "scripts": {
+    "ps2-example": "tsc && node ./build/examples/ps2-example",
+    "teensy-example": "tsc && node ./build/examples/teensy-example"
+  },
   "engine": [
     "node >=0.1.90"
   ],

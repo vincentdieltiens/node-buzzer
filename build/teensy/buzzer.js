@@ -13,7 +13,13 @@ function callHandlers(handlers, controllerIndex, buttonIndex) {
 var TeensyBuzzer = (function () {
     function TeensyBuzzer() {
         var _this = this;
-        console.log('ici');
+        this.eventListeners = {
+            'ready': [],
+            'leave': [],
+            'press': []
+        };
+        this.handlers = [];
+        this.buzzersCount = 4;
         var devices = HID.devices();
         var deviceInfo = devices.find(function (d) {
             return d.vendorId === 0x16C0
@@ -21,24 +27,22 @@ var TeensyBuzzer = (function () {
                 && d.usagePage === 0xFFAB
                 && d.usage === 0x200;
         });
-        if (!deviceInfo) {
-            try {
+        try {
+            if (!deviceInfo) {
                 this.device = new HID.HID(5824, 1158);
             }
-            catch (e) {
-                throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No teensy buzzer found");
+            else {
+                this.device = new HID.HID(deviceInfo.path);
             }
         }
-        else {
-            this.device = new HID.HID(deviceInfo.path);
+        catch (e) {
+            throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No teensy buzzer found");
         }
-        this.buzzersCount = 3;
-        this.eventListeners = { 'ready': [], 'leave': [] };
-        this.handlers = [];
         this.device.on("data", function (signal) {
             var controllerIndex = signal[0];
             callHandlers(_this.handlers['c' + controllerIndex], controllerIndex, 0);
             callHandlers(_this.handlers['all'], controllerIndex, 0);
+            _this.eventListeners['press'].forEach(function (f) { return f(controllerIndex, 0); });
         });
         this.device.on("error", function () {
             _this.eventListeners['leave'].forEach(function (f) {
@@ -58,14 +62,11 @@ var TeensyBuzzer = (function () {
     };
     TeensyBuzzer.prototype.leave = function () {
         for (var i = 0; i < this.buzzersCount; i++) {
-            this.light(i, 0x00);
+            this.light(i, false);
         }
         this.device.close();
     };
     TeensyBuzzer.prototype.light = function (controllerIndexes, value) {
-        if (value != 0x00 && value != 0xFF) {
-            throw new Error("light should have a value of 0x0 or 0xFF");
-        }
         var indexes = [];
         if (typeof (controllerIndexes) == 'number') {
             indexes = [controllerIndexes];
@@ -88,25 +89,35 @@ var TeensyBuzzer = (function () {
         this.light(controllerIndexes, 0xFF);
     };
     TeensyBuzzer.prototype.lightOff = function (controllerIndexes) {
-        this.light(controllerIndexes, 0x0);
+        this.light(controllerIndexes, 0x00);
     };
-    TeensyBuzzer.prototype.blink = function (controllerIndexes, times, duration) {
-        var on = true;
-        var count = 0;
-        var interval = setInterval(function () {
-            if (on) {
-                if (count > times) {
+    TeensyBuzzer.prototype.blink = function (controllerIndexes, times, duration, lightOnAtEnd) {
+        var _this = this;
+        if (times === void 0) { times = 5; }
+        if (duration === void 0) { duration = 150; }
+        if (lightOnAtEnd === void 0) { lightOnAtEnd = true; }
+        return new Promise(function (resolve, reject) {
+            var on = true;
+            var count = 1;
+            var totalTimes = times * 2 - (lightOnAtEnd ? 1 : 0);
+            var _update = function () {
+                if (count > totalTimes) {
                     clearInterval(interval);
+                    resolve();
                     return;
                 }
-                this.lightOn(controllerIndexes);
+                if (on) {
+                    _this.lightOn(controllerIndexes);
+                }
+                else {
+                    _this.lightOff(controllerIndexes);
+                }
                 count++;
-            }
-            else {
-                this.lightOff(controllerIndexes);
-            }
-            on = !on;
-        }, duration);
+                on = !on;
+            };
+            _update();
+            var interval = setInterval(_update, duration);
+        });
     };
     TeensyBuzzer.prototype.onPress = function (callback, controllerIndex, buttonIndex) {
         var _this = this;

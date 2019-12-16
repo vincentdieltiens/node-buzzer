@@ -1,5 +1,7 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+var HID = require("node-hid");
+var BuzzerNotFoundError_1 = require("../BuzzerNotFoundError");
 var signals = [
     [0, 0, 1, 0, 240],
     [0, 0, 16, 0, 240],
@@ -24,7 +26,7 @@ var signals = [
 ];
 function signalsEqual(a, b) {
     for (var i = 0; i < 5; i++) {
-        if (a[i] != b[i]) {
+        if (a[i] !== b[i]) {
             return false;
         }
     }
@@ -49,20 +51,34 @@ function callHandlers(handlers, controllerIndex, buttonIndex) {
 var Ps2Buzzer = (function () {
     function Ps2Buzzer(device) {
         var _this = this;
-        this.device = device;
-        this.eventListeners = { 'ready': [], 'leave': [] };
+        if (device === void 0) { device = null; }
         this.lights = [0x0, 0x0, 0x0, 0x0];
         this.handlers = [];
+        this.eventListeners = {
+            'ready': [],
+            'leave': [],
+            'press': []
+        };
+        try {
+            this.device = device;
+            if (this.device === null) {
+                this.device = new HID.HID(0x054c, 0x1000);
+            }
+        }
+        catch (e) {
+            throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No PS2 buzzer found");
+        }
         this.device.on("data", function (signal) {
             var signalIndex = searchSignalIndex(signal);
             if (signalIndex >= 0) {
-                var controllerIndex = Math.floor(signalIndex / 5);
-                var buttonIndex = signalIndex % 5;
-                var key = 'c' + controllerIndex + 'b' + buttonIndex;
-                callHandlers(_this.handlers[key], controllerIndex, buttonIndex);
-                key = 'c' + controllerIndex;
-                callHandlers(_this.handlers[key], controllerIndex, buttonIndex);
-                callHandlers(_this.handlers['all'], controllerIndex, buttonIndex);
+                var controllerIndex_1 = Math.floor(signalIndex / 5);
+                var buttonIndex_1 = signalIndex % 5;
+                var key = 'c' + controllerIndex_1 + 'b' + buttonIndex_1;
+                callHandlers(_this.handlers[key], controllerIndex_1, buttonIndex_1);
+                key = 'c' + controllerIndex_1;
+                callHandlers(_this.handlers[key], controllerIndex_1, buttonIndex_1);
+                callHandlers(_this.handlers['all'], controllerIndex_1, buttonIndex_1);
+                _this.eventListeners['press'].forEach(function (f) { return f(controllerIndex_1, buttonIndex_1); });
             }
         });
         this.device.on("error", function () {
@@ -82,20 +98,17 @@ var Ps2Buzzer = (function () {
         this.eventListeners[event].splice(index, 1);
     };
     Ps2Buzzer.prototype.leave = function () {
-        this.light([0, 1, 2, 3], 0x00);
+        this.light([0, 1, 2, 3], false);
         this.device.close();
     };
     Ps2Buzzer.prototype.light = function (controllerIndexes, value) {
-        if (value != 0x00 && value != 0xFF) {
-            throw new Error("light should have a value of 0x0 or 0xFF");
-        }
         var message = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
         if (typeof (controllerIndexes) == 'number') {
-            this.lights[controllerIndexes] = value;
+            this.lights[controllerIndexes] = value ? 0xFF : 0x00;
         }
         else {
             for (var ctrl in controllerIndexes) {
-                this.lights[controllerIndexes[ctrl]] = value;
+                this.lights[controllerIndexes[ctrl]] = value ? 0xFF : 0x00;
             }
         }
         for (var i in this.lights) {
@@ -105,30 +118,41 @@ var Ps2Buzzer = (function () {
         this.device.write(message);
     };
     Ps2Buzzer.prototype.lightOn = function (controllerIndexes) {
-        this.light(controllerIndexes, 0xFF);
+        this.light(controllerIndexes, true);
     };
     Ps2Buzzer.prototype.lightOff = function (controllerIndexes) {
-        this.light(controllerIndexes, 0x0);
+        this.light(controllerIndexes, false);
     };
-    Ps2Buzzer.prototype.blink = function (controllerIndexes, times, duration) {
+    Ps2Buzzer.prototype.isLightOn = function (controllerIndex) {
+        return this.lights[controllerIndex] === '0xFF';
+    };
+    Ps2Buzzer.prototype.blink = function (controllerIndexes, times, duration, lightOnAtEnd) {
+        var _this = this;
         if (times === void 0) { times = 5; }
         if (duration === void 0) { duration = 150; }
-        var on = true;
-        var count = 0;
-        var interval = setInterval(function () {
-            if (on) {
-                if (count > times) {
+        if (lightOnAtEnd === void 0) { lightOnAtEnd = true; }
+        return new Promise(function (resolve, reject) {
+            var on = true;
+            var count = 1;
+            var totalTimes = times * 2 - (lightOnAtEnd ? 1 : 0);
+            var _update = function () {
+                if (count > totalTimes) {
                     clearInterval(interval);
+                    resolve();
                     return;
                 }
-                this.lightOn(controllerIndexes);
+                if (on) {
+                    _this.lightOn(controllerIndexes);
+                }
+                else {
+                    _this.lightOff(controllerIndexes);
+                }
                 count++;
-            }
-            else {
-                this.lightOff(controllerIndexes);
-            }
-            on = !on;
-        }, duration);
+                on = !on;
+            };
+            _update();
+            var interval = setInterval(_update, duration);
+        });
     };
     Ps2Buzzer.prototype.onPress = function (callback, controllerIndex, buttonIndex) {
         var _this = this;

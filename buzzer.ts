@@ -1,14 +1,19 @@
+export type BuzzerEvent = 'ready' | 'leave' | 'press';
+
 export interface Buzzer {
 	/**
-	 * Attaches a listener on an event
-	 * event can be "ready" or "leave"
+	 * Attaches an event listener to the event
+	 * @param event the event to listen
+	 * @param callabck the listener to attach and call when the event is fired
 	 */
-	addEventListener(event: string, callabck: Function): void
+	addEventListener(event: BuzzerEvent, callabck: Function): void
 
 	/**
-	 * Removes a listener on an event
+	 * Removes a given listener for a given event
+	 * @param event the event
+	 * @param callback the listener to remove
 	 */
-	removeEventListener(event: string, callback: Function): void;
+	removeEventListener(event: BuzzerEvent, callback: Function): void;
 
 	/**
 	 * Frees all resources used by the buzzer
@@ -17,21 +22,32 @@ export interface Buzzer {
 
 	/**
 	 * Turn on the light of the buzzer
+	 * @param controllerIndexes a controller index or an array of controller indexes
 	 */
-	lightOn(controllerIndexes:number): void;
+	lightOn(controllerIndexes: number | number[]): void;
 
 	/**
 	 * Turns off the light of the buzzer
+	 * @param controllerIndexes a controller index or an array of controller indexes
 	 */
-	lightOff(controllerIndexes:number): void;
+	lightOff(controllerIndexes: number | number[]): void;
 
 	/**
-	 * Blinks the light of the buzzer
+	 * Makes one or more controller to blink
+	 * @param controllerIndexes a controller index or an array of controller indexes
+	 * @param times (default: 5) the number of on/off cycles
+	 * @param duration (default : 150) the duration of earch on/off in ms
+	 * @param lightOnAtEnd (default: true) is the light on at the end of the blinking
+	 * @returns a promise that will be resolved when the blinking is finished
 	 */
-	blink(controllerIndexes:Array<number>, times?:number, duration?:number): void;
+	blink(controllerIndexes: number | number[], times?:number, duration?:number, lightOnAtEnd?: boolean): Promise<void>;
 
 	/**
-	 * Buzzer press listener
+	 * Attaches an listener for the press event. The listener can be attached only to a specific controller
+	 * or a specific button
+	 * @param callback the listener to attach
+	 * @param controllerIndex (default: null) the controller index
+	 * @param buttonIndex (default: null) the button index
 	 */
 	onPress(callback: Function, controllerIndex?:number, buttonIndex?:number): Function;
 

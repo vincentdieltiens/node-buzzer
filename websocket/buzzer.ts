@@ -4,6 +4,7 @@
 import * as ip from 'ip';
 import * as ws from 'nodejs-websocket';
 import { Buzzer } from '../buzzer';
+import { resolve } from 'url';
 
 function callHandlers(handlers:Array<Function>, controllerIndex:number, buttonIndex:number) {
 	if (!handlers) {
@@ -31,7 +32,7 @@ export class WebsocketBuzzer implements Buzzer {
 		this.handlers = [];
 
 		this.eventListeners = { 'ready': [], 'leave': [] };
-		
+
 		this.initWebsocket()
 	}
 
@@ -64,8 +65,11 @@ export class WebsocketBuzzer implements Buzzer {
 			'on': false
 		}));
 	}
-	
-	blink(controllerIndexes:Array<number>, times:number=5, duration:number=0.2) {
+
+	blink(controllerIndexes:Array<number>, times:number=5, duration:number=0.2): Promise<void> {
+		return new Promise((resolve) => {
+			resolve();
+		});
 	}
 
 	onPress(callback: Function, controllerIndex?:number, buttonIndex?:number): Function {
@@ -89,7 +93,7 @@ export class WebsocketBuzzer implements Buzzer {
 			if (index >= 0) {
 				this.handlers[key].splice(index, 1);
 			}
-		};		
+		};
 	}
 
 	initWebsocket() {
@@ -103,15 +107,15 @@ export class WebsocketBuzzer implements Buzzer {
 
 			conn.on("text", (str:string) => {
 				var data = JSON.parse(str);
-				
+
 				if (data.press != undefined) {
 					var controllerIndex = data.press;
 					var buttonIndex = 0;
-					
+
 					var key = 'c'+controllerIndex;
 					callHandlers(this.handlers[key], controllerIndex, buttonIndex);
 
-					callHandlers(this.handlers['all'], controllerIndex, buttonIndex);					
+					callHandlers(this.handlers['all'], controllerIndex, buttonIndex);
 				}
 			});
 

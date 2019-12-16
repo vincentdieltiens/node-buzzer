@@ -27,5 +27,5 @@
   "engine": [
     "node >=0.1.90"
   ],
-  "main": "index.ts"
+  "main": "build/index.js"
 }

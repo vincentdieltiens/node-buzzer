@@ -26,6 +26,12 @@ or clone this repo
 git clone https://github.com/vincentdieltiens/node-buzzer
 ```
 
+if you get an error with node-gyp, install g++.
+In Ubuntu you can install it using :
+```
+sudo apt-get install build-essentials
+```
+
 Tests
 -----
 

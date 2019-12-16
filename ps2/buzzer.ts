@@ -120,6 +120,7 @@ export class Ps2Buzzer implements Buzzer {
 			if (this.device === null) {
 				this.device = new HID.HID(0x054c, 0x1000);
 			}
+			this.device.setNonBlocking(true);
 		} catch (e) {
 			throw new BuzzerNotFoundError("No PS2 buzzer found");
 		}
@@ -177,6 +178,7 @@ export class Ps2Buzzer implements Buzzer {
 	leave(): void {
 		this.light([0, 1, 2, 3], false);
 		this.device.close();
+		this.eventListeners.leave.forEach(f => f());
 	}
 
 	/**

@@ -64,6 +64,7 @@ var Ps2Buzzer = (function () {
             if (this.device === null) {
                 this.device = new HID.HID(0x054c, 0x1000);
             }
+            this.device.setNonBlocking(true);
         }
         catch (e) {
             throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No PS2 buzzer found");

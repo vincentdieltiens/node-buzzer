@@ -55,6 +55,7 @@ export class TeensyBuzzer implements Buzzer {
 			} else {
 				this.device = new HID.HID(deviceInfo.path);
 			}
+			this.device.setNonBlocking(true);
 		} catch (e) {
 			throw new BuzzerNotFoundError("No teensy buzzer found");
 		}
@@ -71,6 +72,8 @@ export class TeensyBuzzer implements Buzzer {
 				f();
 			});
 		});
+
+
 	}
 
 	/**
@@ -103,6 +106,7 @@ export class TeensyBuzzer implements Buzzer {
 			this.light(i, false);
 		}
 		this.device.close();
+		this.eventListeners.leave.forEach(f => f());
 	}
 
 	/**

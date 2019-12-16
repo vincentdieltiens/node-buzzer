@@ -34,6 +34,7 @@ var TeensyBuzzer = (function () {
             else {
                 this.device = new HID.HID(deviceInfo.path);
             }
+            this.device.setNonBlocking(true);
         }
         catch (e) {
             throw new BuzzerNotFoundError_1.BuzzerNotFoundError("No teensy buzzer found");
@@ -65,6 +66,7 @@ var TeensyBuzzer = (function () {
             this.light(i, false);
         }
         this.device.close();
+        this.eventListeners.leave.forEach(function (f) { return f(); });
     };
     TeensyBuzzer.prototype.light = function (controllerIndexes, value) {
         var indexes = [];
